@@ -58,19 +58,6 @@ exporters:
   # Loki exporter - for logs
   loki:
     endpoint: http://loki:3100/loki/api/v1/push
-    labels:
-      resource:
-        # Extract resource attributes as labels
-        service.name: "service_name"
-        service.namespace: "service_namespace"
-        deployment.environment: "environment"
-      attributes:
-        # Extract log attributes as labels
-        level: "level"
-        mfe: "mfe"
-      record:
-        # Extract log record fields as labels
-        traceID: "traceID"
 
   # Debug exporter - prints to console (useful for development)
   debug:

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # OpenTelemetry Collector - receives telemetry data from frontend apps
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.91.0
+    image: otel/opentelemetry-collector-contrib:0.114.0
     container_name: dash-otel-collector
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:

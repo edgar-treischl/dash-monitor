@@ -103,14 +103,57 @@ curl http://localhost:3200/ready
 curl http://localhost:3100/ready
 ```
 
-### 3. Access Grafana
+### 3. Test with Sample Data (Optional)
+
+Send synthetic telemetry to test the stack without needing a real frontend:
+
+```bash
+# Using Node.js (more realistic data)
+node test-telemetry.js
+
+# Or using bash/curl (simpler)
+./test-telemetry.sh
+```
+
+Both scripts send:
+- **Traces**: MFE loading and navigation spans
+- **Logs**: Info and error logs with trace correlation
+
+The output includes a trace ID you can search for in Grafana.
+
+### 4. Access Grafana
 
 Open [http://localhost:3000](http://localhost:3000)
 
 - **Username**: `admin`
 - **Password**: `admin` (you'll be prompted to change on first login)
 
-### 4. Configure Your Frontend App
+**Query Examples:**
+
+In **Explore → Tempo** (traces):
+```traceql
+{ resource.mfe = "orders" }
+{ status = error }
+{ duration > 100ms }
+```
+
+In **Explore → Loki** (logs):
+```logql
+{job="dash-telemetry/orders-mfe"}
+{level="error"}
+{level="info"}
+{job=~"dash-telemetry/.*"} |= "error"
+```
+
+**Tip**: The `job` label format is `{namespace}/{service-name}`, e.g., `dash-telemetry/orders-mfe` or `dash-telemetry/shell`.
+
+In **Explore → Prometheus** (metrics):
+```promql
+dash_telemetry_errors_total
+rate(dash_telemetry_errors_total[5m])
+```
+
+### 5. Configure Your Frontend App
 
 In your Vite/React app using `@edgar-treischl/dash-telemetry`:
 
