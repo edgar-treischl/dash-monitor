@@ -303,13 +303,9 @@ rm -rf data/
 
 ## Grafana Dashboards
 
-Pre-configured dashboards included:
+Pre-configured dashboard:
 
-1. **Application Overview**: Key metrics, error rates, request counts
-2. **Core Web Vitals**: LCP, CLS, INP, FCP, TTFB
-3. **Error Analysis**: Exception tracking, error trends
-4. **Trace Explorer**: Distributed trace visualization
-5. **MFE Performance**: Module Federation remote load times
+- **Dash Monitor**: Trace visualization and exploration
 
 Access at: [http://localhost:3000/dashboards](http://localhost:3000/dashboards)
 
