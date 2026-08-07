@@ -37,16 +37,31 @@ processors:
         from_attribute: environment
         action: insert
 
-  # Attributes processor - modify span/log attributes
+  # Attributes processor - modify span/log attributes for Loki label extraction
   attributes:
     actions:
-      # Ensure common attributes are present
+      # Copy resource attributes as record attributes so Loki can index them
+      - key: service.name
+        action: upsert
+        from_attribute: service.name
+      - key: mfe
+        action: upsert
+        from_attribute: mfe
+      - key: environment
+        action: upsert
+        from_attribute: environment
       - key: http.url
         action: upsert
         from_attribute: url.full
       - key: http.method
         action: upsert
         from_attribute: http.request.method
+
+  # Resource detection - ensures resource attributes are propagated
+  resourcedetection:
+    detectors: [system, env]
+    timeout: 2s
+    override: false
 
 exporters:
   # Tempo exporter - for distributed traces
@@ -84,10 +99,10 @@ service:
       processors: [memory_limiter, resource, batch]
       exporters: [prometheus, debug]
     
-    # Logs pipeline
+    # Logs pipeline - add resourcedetection to propagate resource attributes
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, resource, attributes, batch]
+      processors: [memory_limiter, resourcedetection, resource, attributes, batch]
       exporters: [loki, debug]
 
   # Telemetry configuration for the collector itself

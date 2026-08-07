@@ -44,11 +44,11 @@ datasources:
           name: TraceID
           url: '$${__value.raw}'
 
-  # Prometheus datasource for metrics (if using prometheus exporter)
+  # Prometheus datasource for metrics
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://otel-collector:8889
+    url: http://prometheus:9090
     uid: prometheus
     editable: true
     jsonData:

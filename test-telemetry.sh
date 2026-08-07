@@ -87,6 +87,127 @@ curl -X POST "${OTEL_ENDPOINT}/v1/logs" \
 
 echo "✅ Log sent"
 echo ""
+
+# Send Web Vitals metrics
+echo "📈 Sending Web Vitals metrics..."
+START_TIME=$((TIMESTAMP - 5000000000))
+
+send_web_vitals() {
+  local MFE=$1
+  local LCP=$2   # seconds
+  local CLS=$3   # ratio
+  local INP=$4   # milliseconds
+  local FCP=$5   # seconds
+  local TTFB=$6  # seconds
+
+  curl -X POST "${OTEL_ENDPOINT}/v1/metrics" \
+    -H "Content-Type: application/json" \
+    -d "{
+  \"resourceMetrics\": [{
+    \"resource\": {
+      \"attributes\": [
+        {\"key\": \"service.name\", \"value\": {\"stringValue\": \"shell\"}},
+        {\"key\": \"service.version\", \"value\": {\"stringValue\": \"1.5.0\"}},
+        {\"key\": \"service.namespace\", \"value\": {\"stringValue\": \"dash-telemetry\"}},
+        {\"key\": \"environment\", \"value\": {\"stringValue\": \"development\"}}
+      ]
+    },
+    \"scopeMetrics\": [{
+      \"scope\": {\"name\": \"dash-telemetry\", \"version\": \"1.0.0\"},
+      \"metrics\": [
+        {
+          \"name\": \"lcp\",
+          \"description\": \"Largest Contentful Paint in seconds\",
+          \"unit\": \"s\",
+          \"histogram\": {
+            \"aggregationTemporality\": 2,
+            \"dataPoints\": [{
+              \"attributes\": [{\"key\": \"mfe\", \"value\": {\"stringValue\": \"${MFE}\"}}, {\"key\": \"environment\", \"value\": {\"stringValue\": \"development\"}}],
+              \"startTimeUnixNano\": \"${START_TIME}\",
+              \"timeUnixNano\": \"${TIMESTAMP}\",
+              \"count\": \"1\", \"sum\": ${LCP},
+              \"bucketCounts\": [\"0\",\"0\",\"1\",\"0\",\"0\"],
+              \"explicitBounds\": [0.1,0.5,1.0,2.5,5.0],
+              \"min\": ${LCP}, \"max\": ${LCP}
+            }]
+          }
+        },
+        {
+          \"name\": \"cls\",
+          \"description\": \"Cumulative Layout Shift score\",
+          \"unit\": \"1\",
+          \"gauge\": {
+            \"dataPoints\": [{
+              \"attributes\": [{\"key\": \"mfe\", \"value\": {\"stringValue\": \"${MFE}\"}}, {\"key\": \"environment\", \"value\": {\"stringValue\": \"development\"}}],
+              \"timeUnixNano\": \"${TIMESTAMP}\",
+              \"asDouble\": ${CLS}
+            }]
+          }
+        },
+        {
+          \"name\": \"inp\",
+          \"description\": \"Interaction to Next Paint in milliseconds\",
+          \"unit\": \"ms\",
+          \"histogram\": {
+            \"aggregationTemporality\": 2,
+            \"dataPoints\": [{
+              \"attributes\": [{\"key\": \"mfe\", \"value\": {\"stringValue\": \"${MFE}\"}}, {\"key\": \"environment\", \"value\": {\"stringValue\": \"development\"}}],
+              \"startTimeUnixNano\": \"${START_TIME}\",
+              \"timeUnixNano\": \"${TIMESTAMP}\",
+              \"count\": \"1\", \"sum\": ${INP},
+              \"bucketCounts\": [\"0\",\"0\",\"1\",\"0\",\"0\"],
+              \"explicitBounds\": [50,100,200,500,1000],
+              \"min\": ${INP}, \"max\": ${INP}
+            }]
+          }
+        },
+        {
+          \"name\": \"fcp\",
+          \"description\": \"First Contentful Paint in seconds\",
+          \"unit\": \"s\",
+          \"histogram\": {
+            \"aggregationTemporality\": 2,
+            \"dataPoints\": [{
+              \"attributes\": [{\"key\": \"mfe\", \"value\": {\"stringValue\": \"${MFE}\"}}, {\"key\": \"environment\", \"value\": {\"stringValue\": \"development\"}}],
+              \"startTimeUnixNano\": \"${START_TIME}\",
+              \"timeUnixNano\": \"${TIMESTAMP}\",
+              \"count\": \"1\", \"sum\": ${FCP},
+              \"bucketCounts\": [\"0\",\"0\",\"1\",\"0\",\"0\"],
+              \"explicitBounds\": [0.1,0.5,1.0,2.5,5.0],
+              \"min\": ${FCP}, \"max\": ${FCP}
+            }]
+          }
+        },
+        {
+          \"name\": \"ttfb\",
+          \"description\": \"Time to First Byte in seconds\",
+          \"unit\": \"s\",
+          \"histogram\": {
+            \"aggregationTemporality\": 2,
+            \"dataPoints\": [{
+              \"attributes\": [{\"key\": \"mfe\", \"value\": {\"stringValue\": \"${MFE}\"}}, {\"key\": \"environment\", \"value\": {\"stringValue\": \"development\"}}],
+              \"startTimeUnixNano\": \"${START_TIME}\",
+              \"timeUnixNano\": \"${TIMESTAMP}\",
+              \"count\": \"1\", \"sum\": ${TTFB},
+              \"bucketCounts\": [\"0\",\"0\",\"1\",\"0\",\"0\"],
+              \"explicitBounds\": [0.05,0.1,0.2,0.5,1.0],
+              \"min\": ${TTFB}, \"max\": ${TTFB}
+            }]
+          }
+        }
+      ]
+    }]
+  }]
+}" -s -o /dev/null -w "HTTP %{http_code}\n"
+}
+
+#               MFE          LCP   CLS    INP   FCP   TTFB
+send_web_vitals "orders"     1.8   0.04   120   0.9   0.15
+echo "   ✅ orders MFE vitals sent (LCP=1.8s, CLS=0.04, INP=120ms)"
+send_web_vitals "inventory"  2.6   0.12   250   1.4   0.32
+echo "   ✅ inventory MFE vitals sent (LCP=2.6s, CLS=0.12, INP=250ms)"
+
+echo ""
 echo "✨ All telemetry data sent successfully!"
 echo ""
 echo "📌 Next steps:"
@@ -95,3 +216,4 @@ echo "   2. Go to Explore → Tempo"
 echo "   3. Search for trace ID: ${TRACE_ID}"
 echo "   4. Go to Explore → Loki"
 echo "   5. Query: {job=\"dash-telemetry/orders-mfe\"}"
+echo "   6. Open the 'Web Vitals' dashboard for LCP / CLS / INP charts"

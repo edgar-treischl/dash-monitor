@@ -3,7 +3,6 @@ apiVersion: 1
 providers:
   - name: 'Dash Telemetry Dashboards'
     orgId: 1
-    folderUid: 'd4c6d67a-c17a-4681-bac4-98e38af29b6a'
     type: file
     disableDeletion: false
     updateIntervalSeconds: 10

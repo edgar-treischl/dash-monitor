@@ -50,6 +50,27 @@ services:
       - dash-monitor
     restart: unless-stopped
 
+  # Prometheus - metrics storage and querying
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: dash-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./data/prometheus:/prometheus
+    ports:
+      - "9090:9090"   # Prometheus UI
+    depends_on:
+      - otel-collector
+    networks:
+      - dash-monitor
+    restart: unless-stopped
+
   # Grafana - visualization and dashboards
   grafana:
     image: grafana/grafana:10.2.3
@@ -70,6 +91,7 @@ services:
     depends_on:
       - tempo
       - loki
+      - prometheus
     networks:
       - dash-monitor
     restart: unless-stopped
