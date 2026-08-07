@@ -1,0 +1,58 @@
+apiVersion: 1
+
+datasources:
+  # Tempo datasource for distributed tracing
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    uid: tempo
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: GET
+      tracesToLogs:
+        datasourceUid: loki
+        tags: ['service.name', 'mfe']
+        mappedTags: [{ key: 'service.name', value: 'service_name' }]
+        mapTagNamesEnabled: true
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        filterByTraceID: true
+        filterBySpanID: false
+      serviceMap:
+        datasourceUid: prometheus
+      search:
+        hide: false
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki
+
+  # Loki datasource for logs
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    uid: loki
+    editable: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: '"traceID":"(\w+)"'
+          name: TraceID
+          url: '$${__value.raw}'
+
+  # Prometheus datasource for metrics (if using prometheus exporter)
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://otel-collector:8889
+    uid: prometheus
+    editable: true
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo

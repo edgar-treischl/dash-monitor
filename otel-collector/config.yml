@@ -1,0 +1,114 @@
+receivers:
+  # OTLP receiver - accepts traces, metrics, and logs
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "http://localhost:*"
+            - "http://127.0.0.1:*"
+            - "http://0.0.0.0:*"
+          allowed_headers:
+            - "*"
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  # Batch processor - reduces number of outgoing connections
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Memory limiter - prevents out of memory issues
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # Resource processor - adds additional resource attributes
+  resource:
+    attributes:
+      - key: service.namespace
+        value: dash-telemetry
+        action: insert
+      - key: deployment.environment
+        from_attribute: environment
+        action: insert
+
+  # Attributes processor - modify span/log attributes
+  attributes:
+    actions:
+      # Ensure common attributes are present
+      - key: http.url
+        action: upsert
+        from_attribute: url.full
+      - key: http.method
+        action: upsert
+        from_attribute: http.request.method
+
+exporters:
+  # Tempo exporter - for distributed traces
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # Loki exporter - for logs
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    labels:
+      resource:
+        # Extract resource attributes as labels
+        service.name: "service_name"
+        service.namespace: "service_namespace"
+        deployment.environment: "environment"
+      attributes:
+        # Extract log attributes as labels
+        level: "level"
+        mfe: "mfe"
+      record:
+        # Extract log record fields as labels
+        traceID: "traceID"
+
+  # Debug exporter - prints to console (useful for development)
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+  # Prometheus exporter - expose metrics for scraping
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: dash_telemetry
+
+service:
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes, batch]
+      exporters: [otlp/tempo, debug]
+    
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus, debug]
+    
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes, batch]
+      exporters: [loki, debug]
+
+  # Telemetry configuration for the collector itself
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888
+
+  extensions: []
